@@ -28,22 +28,22 @@ func runCmdFromStdin(populate_stdin_func func(io.WriteCloser)) (string, error) {
 	cmd := exec.Command("wkhtmltopdf", "-", "-")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return "", fmt.Errorf("%s", "request could not be performed")
+		return "", fmt.Errorf("%s", "request could not be performed", err)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("%s", "request could not be performed")
+		return "", fmt.Errorf("%s", "request could not be performed", err)
 	}
 	err = cmd.Start()
 	if err != nil {
-		return "", fmt.Errorf("%s", "request could not be performed")
+		return "", fmt.Errorf("%s", "request could not be performed", err)
 	}
 	populate_stdin_func(stdin)
 	buffer := &bytes.Buffer{}
 	go io.Copy(buffer, stdout)
 	err = cmd.Wait()
 	if err != nil {
-		return "", fmt.Errorf("%s", "request could not be performed")
+		return "", fmt.Errorf("%s", "request could not be performed", err)
 	}
 	return buffer.String(), nil
 }
