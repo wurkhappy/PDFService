@@ -11,6 +11,7 @@ import (
 func ReturnString(params map[string]interface{}, body []byte) ([]byte, error, int) {
 	html := string(body)
 	pdfString, err := runCmdFromStdin(populateStdin(html))
+	fmt.Print(html)
 	if err != nil {
 		return nil, err, http.StatusBadRequest
 	}
