@@ -12,6 +12,7 @@ func ReturnString(params map[string]interface{}, body []byte) ([]byte, error, in
 	html := string(body)
 	pdfString, err := runCmdFromStdin(populateStdin(html))
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, err, http.StatusBadRequest
 	}
 	return []byte(pdfString), nil, http.StatusOK
@@ -25,7 +26,7 @@ func populateStdin(str string) func(io.WriteCloser) {
 }
 
 func runCmdFromStdin(populate_stdin_func func(io.WriteCloser)) (string, error) {
-	cmd := exec.Command("wkhtmltopdf", "-", "-")
+	cmd := exec.Command("/Users/matthewparker/Desktop/wkhtmltopdf.app/Contents/MacOS/wkhtmltopdf", "-", "-")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return "", fmt.Errorf("%s", "request could not be performed", err)
