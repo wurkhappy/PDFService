@@ -5,7 +5,12 @@ import (
 	"flag"
 	"github.com/wurkhappy/WH-Config"
 	"github.com/wurkhappy/mdp"
+	"log"
 	"net/url"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
 var production = flag.Bool("production", false, "Production settings")
@@ -27,13 +32,39 @@ func main() {
 
 	gophers := 1
 
+	// Create a channel to talk with the OS
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, os.Kill)
+	signal.Notify(sigChan, syscall.SIGTERM)
+	// go func() {
+	// 	time.Sleep(10 * time.Second)
+	// 	sigChan <- true
+	// }()
+
+	// Create a channel to shut down the program early
+	shutChan := make(chan bool)
+	var wg sync.WaitGroup
+
 	for i := 0; i < gophers; i++ {
 		worker := mdp.NewWorker(config.MDPBroker, config.PDFService, false)
 		defer worker.Close()
-		go route(worker)
+		go route(worker, shutChan, wg)
 	}
 
-	select {}
+	select {
+	case <-sigChan:
+		log.Println("Main", "controller.Run", "******> Program Being Killed")
+
+		// Signal the program to shutdown and wait for confirmation
+		for i := 0; i < gophers; i++ {
+			shutChan <- true
+		}
+	}
+	wg.Wait()
+
+	log.Println("Main", "controller.Run", "******> Shutting Down")
+	return
 }
 
 type Resp struct {
@@ -41,9 +72,10 @@ type Resp struct {
 	StatusCode int    `json:"status_code"`
 }
 
-func route(worker mdp.Worker) {
+func route(worker mdp.Worker, shutChan chan bool, wg sync.WaitGroup) {
+	wg.Add(1)
 	for reply := [][]byte{}; ; {
-		request := worker.Recv(reply)
+		request := worker.Recv(reply, shutChan)
 		if len(request) == 0 {
 			break
 		}
